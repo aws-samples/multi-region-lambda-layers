@@ -1,0 +1,8 @@
+{
+    "name": "lambda-layer",
+    "version": "1.0.0",
+    "description": "Sample AWS Lambda layer",
+    "dependencies": {
+      "aws-sdk": "latest"
+    }
+  }
