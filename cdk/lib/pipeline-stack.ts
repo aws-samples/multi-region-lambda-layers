@@ -1,11 +1,12 @@
-import { Construct, Duration, Stack, StackProps } from '@aws-cdk/core';
-import * as codebuild from '@aws-cdk/aws-codebuild';
-import * as codecommit from '@aws-cdk/aws-codecommit';
-import * as codepipeline from '@aws-cdk/aws-codepipeline';
-import * as codepipelineActions from '@aws-cdk/aws-codepipeline-actions';
-import * as iam from '@aws-cdk/aws-iam';
-import { Asset } from '@aws-cdk/aws-s3-assets';
-import { NodejsFunction } from '@aws-cdk/aws-lambda-nodejs';
+import { Construct } from 'constructs';
+import { Duration, Stack, StackProps } from 'aws-cdk-lib';
+import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+import * as codecommit from 'aws-cdk-lib/aws-codecommit';
+import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
+import * as codepipelineActions from 'aws-cdk-lib/aws-codepipeline-actions';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { Asset } from 'aws-cdk-lib/aws-s3-assets';
 import path = require('path');
 
 interface LambdaLayerPipelineStackProps extends StackProps {

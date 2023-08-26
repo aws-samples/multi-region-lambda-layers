@@ -1,8 +1,10 @@
 // aws-sdk dependencies are provided with the Lambda runtime
-import { CodePipeline, Lambda, S3 } from 'aws-sdk';
+import { LambdaClient, PublishLayerVersionCommand, AddLayerVersionPermissionCommand } from "@aws-sdk/client-lambda";
+import { CodePipelineClient, PutJobSuccessResultCommand, PutJobFailureResultCommand } from "@aws-sdk/client-codepipeline"; // ES Modules import
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
-const s3 = new S3();
-const codepipeline = new CodePipeline();
+const s3 = new S3Client();
+const codepipeline = new CodePipelineClient();
 
 export async function handler(event: any) {
   console.log('Received event ', JSON.stringify(event));
@@ -14,14 +16,16 @@ export async function handler(event: any) {
   const { region, layerPrincipal, organizationId } = JSON.parse(event['CodePipeline.job'].data.actionConfiguration.configuration.UserParameters);
 
   // Download layer
-  const layerZip = await s3.getObject({
+  const getObjectCommand = new GetObjectCommand({
     Bucket: location.s3Location.bucketName,
     Key: location.s3Location.objectKey
-  }).promise();
+  });
+  const getObjectCommandResult = await s3.send(getObjectCommand)
+  const layerZip = await getObjectCommandResult.Body?.transformToByteArray();
 
   const layerParams = {
     Content: {
-      ZipFile: layerZip.Body
+      ZipFile: layerZip
     },
     LayerName: 'sample-layer',
     CompatibleRuntimes: ['nodejs12.x', 'nodejs14.x'],
@@ -30,18 +34,20 @@ export async function handler(event: any) {
   };
   try {
     // Create Lambda client for the specified region
-    const lambda = new Lambda({ region });
-    const layer = await lambda.publishLayerVersion(layerParams).promise();
+    const lambda = new LambdaClient({ region });
+    const command = new PublishLayerVersionCommand(layerParams);
+    const layer = await lambda.send(command);;
     console.log('Layer created: ', layer);
     if (layer.Version) {
-      const layerPermissions = await lambda.addLayerVersionPermission({
+      const layerPermissionsCommand = new AddLayerVersionPermissionCommand({
         Action: 'lambda:GetLayerVersion',
         LayerName: layerParams.LayerName,
         Principal: layerPrincipal,
         StatementId: 'layer-policy',
         VersionNumber: layer.Version,
         ...(organizationId && { OrganizationId: organizationId }),
-      }).promise();
+      });
+      const layerPermissions = await lambda.send(layerPermissionsCommand);
       console.log('Permissions applied: ', layerPermissions);
     }
   } catch (err) {
@@ -54,8 +60,9 @@ export async function handler(event: any) {
       },
       jobId
     };
-    return codepipeline.putJobFailureResult(params).promise();
+    const command = new PutJobFailureResultCommand(params);
+    return await codepipeline.send(command);
   }
-  // Notify CodePipeline of a successful job
-  return codepipeline.putJobSuccessResult({ jobId }).promise();
+  const command = new PutJobSuccessResultCommand({ jobId });
+  return await codepipeline.send(command);
 }

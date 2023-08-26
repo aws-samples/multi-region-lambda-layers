@@ -15,12 +15,14 @@
     "@types/node": "^14.11.8",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
-    "aws-sdk": "^2.1354.0",
     "eslint": "^7.32.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-config-airbnb-typescript": "^14.0.1",
     "eslint-plugin-import": "^2.25.2",
     "ts-node": "^9.0.0",
-    "typescript": "~3.9.7"
+    "typescript": "~3.9.7",
+    "@aws-sdk/client-codepipeline": "^3.398.0",
+    "@aws-sdk/client-lambda": "^3.398.0",
+    "@aws-sdk/client-s3": "^3.398.0"
   }
 }
