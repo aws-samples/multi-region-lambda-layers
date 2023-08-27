@@ -28,7 +28,7 @@ export async function handler(event: any) {
       ZipFile: layerZip
     },
     LayerName: 'sample-layer',
-    CompatibleRuntimes: ['nodejs12.x', 'nodejs14.x'],
+    CompatibleRuntimes: ['nodejs18.x','nodejs16.x', 'nodejs14.x'],
     Description: 'Sample layer distributed to multiple region by CodePipeline',
     LicenseInfo: 'MIT'
   };

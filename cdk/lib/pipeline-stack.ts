@@ -89,7 +89,7 @@ export default class LambdaLayerPipelineStack extends Stack {
 
     const cfnRepository = new codecommit.CfnRepository(this, 'LambdaLayerSource', {
       repositoryName: 'lambda-layer-source',
-      repositoryDescription: 'Contains the source code for a nodejs12+14 Lambda layer.',
+      repositoryDescription: 'Contains the source code for a nodejs v14,v16 and v18 Lambda layer.',
       // This initializes the main branch with source code from S3
       code: {
         branchName: 'main',
