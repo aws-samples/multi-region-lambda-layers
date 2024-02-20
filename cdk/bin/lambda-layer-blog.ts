@@ -17,4 +17,5 @@ new LambdaLayerPipelineStack(app, 'LambdaLayerPipelineStack', {
   regionCodesToDistribute: ['eu-central-1', 'eu-west-1', 'us-west-1', 'us-east-1'],
   layerPrincipal: cdk.Aws.ACCOUNT_ID,
   organizationId: '',
+  description: 'CodePipeline to build and distribute AWS Lambda layers across the specifcied region codes (uksb-1tupboc28)'
 });
