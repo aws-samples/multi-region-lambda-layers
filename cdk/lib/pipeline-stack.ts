@@ -108,7 +108,7 @@ export default class LambdaLayerPipelineStack extends Stack {
    */
   private createLambdaRole() {
     // Permissions to publish new layer versions and add permissions
-    const layerUpdaterRole = new iam.Role(this, 'LayerUpdaterRrole', {
+    const layerUpdaterRole = new iam.Role(this, 'LayerUpdaterRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
       inlinePolicies: {
         PublishLambdaLayer: new iam.PolicyDocument({
