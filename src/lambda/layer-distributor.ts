@@ -1,6 +1,6 @@
 // aws-sdk dependencies are provided with the Lambda runtime
-import { LambdaClient, PublishLayerVersionCommand, AddLayerVersionPermissionCommand } from "@aws-sdk/client-lambda";
-import { CodePipelineClient, PutJobSuccessResultCommand, PutJobFailureResultCommand } from "@aws-sdk/client-codepipeline"; // ES Modules import
+import { LambdaClient, PublishLayerVersionCommand, AddLayerVersionPermissionCommand, Runtime } from "@aws-sdk/client-lambda";
+import { CodePipelineClient, PutJobSuccessResultCommand, PutJobFailureResultCommand, FailureType } from "@aws-sdk/client-codepipeline"; // ES Modules import
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 const s3 = new S3Client();
@@ -28,7 +28,7 @@ export async function handler(event: any) {
       ZipFile: layerZip
     },
     LayerName: 'sample-layer',
-    CompatibleRuntimes: ['nodejs18.x','nodejs16.x', 'nodejs14.x'],
+    CompatibleRuntimes: [Runtime.nodejs22x, Runtime.nodejs20x, Runtime.nodejs18x] as Runtime[],
     Description: 'Sample layer distributed to multiple region by CodePipeline',
     LicenseInfo: 'MIT'
   };
@@ -56,7 +56,7 @@ export async function handler(event: any) {
     const params = {
       failureDetails: {
         message: 'Layer distribution failed. Please check CloudWatch logs',
-        type: 'JobFailed'
+        type: FailureType.JobFailed
       },
       jobId
     };
