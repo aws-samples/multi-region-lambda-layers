@@ -7,7 +7,7 @@ import * as codepipelineActions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Asset } from 'aws-cdk-lib/aws-s3-assets';
-import path = require('path');
+import path from 'path';
 
 interface LambdaLayerPipelineStackProps extends StackProps {
   regionCodesToDistribute: string[],
@@ -89,7 +89,7 @@ export default class LambdaLayerPipelineStack extends Stack {
 
     const cfnRepository = new codecommit.CfnRepository(this, 'LambdaLayerSource', {
       repositoryName: 'lambda-layer-source',
-      repositoryDescription: 'Contains the source code for a nodejs v14,v16 and v18 Lambda layer.',
+      repositoryDescription: 'Contains the source code for a nodejs v18, v20 and v22 Lambda layer.',
       // This initializes the main branch with source code from S3
       code: {
         branchName: 'main',
@@ -162,7 +162,7 @@ export default class LambdaLayerPipelineStack extends Stack {
         }
       }),
       environment: {
-        buildImage: codebuild.LinuxBuildImage.STANDARD_5_0
+        buildImage: codebuild.LinuxBuildImage.STANDARD_7_0
       }
     });
   }
