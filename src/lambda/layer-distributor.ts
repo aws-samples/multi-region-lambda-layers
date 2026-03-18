@@ -28,7 +28,7 @@ export async function handler(event: any) {
       ZipFile: layerZip
     },
     LayerName: 'sample-layer',
-    CompatibleRuntimes: [Runtime.nodejs22x, Runtime.nodejs20x, Runtime.nodejs18x] as Runtime[],
+    CompatibleRuntimes: [Runtime.nodejs22x, Runtime.nodejs24x] as Runtime[],
     Description: 'Sample layer distributed to multiple region by CodePipeline',
     LicenseInfo: 'MIT'
   };

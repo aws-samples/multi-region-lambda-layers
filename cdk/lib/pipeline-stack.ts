@@ -5,6 +5,7 @@ import * as codecommit from 'aws-cdk-lib/aws-codecommit';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipelineActions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Asset } from 'aws-cdk-lib/aws-s3-assets';
 import path from 'path';
@@ -44,6 +45,7 @@ export default class LambdaLayerPipelineStack extends Stack {
 
     const distributor = new NodejsFunction(this, 'LayerDistributor', {
       entry: '../src/lambda/layer-distributor.ts',
+      runtime: lambda.Runtime.NODEJS_24_X,
       role: layerUpdaterRole,
       functionName: 'LambdaLayerDistributor',
       description: 'Distributes Lambda layers into multiple regions from a single ZIP archive.',
@@ -89,7 +91,7 @@ export default class LambdaLayerPipelineStack extends Stack {
 
     const cfnRepository = new codecommit.CfnRepository(this, 'LambdaLayerSource', {
       repositoryName: 'lambda-layer-source',
-      repositoryDescription: 'Contains the source code for a nodejs v18, v20 and v22 Lambda layer.',
+      repositoryDescription: 'Contains the source code for a nodejs v22 Lambda layer.',
       // This initializes the main branch with source code from S3
       code: {
         branchName: 'main',
