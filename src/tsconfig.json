@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
-    "target": "ES2018",
-    "module": "commonjs",
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
     "lib": [
-      "es2018"
+      "ES2022"
     ],
     "declaration": true,
     "strict": true,
@@ -19,6 +20,9 @@
     "inlineSources": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
     "typeRoots": [
       "./node_modules/@types"
     ]
