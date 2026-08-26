@@ -1,6 +1,10 @@
 // aws-sdk dependencies are provided with the Lambda runtime
-import { LambdaClient, PublishLayerVersionCommand, AddLayerVersionPermissionCommand, Runtime } from "@aws-sdk/client-lambda";
-import { CodePipelineClient, PutJobSuccessResultCommand, PutJobFailureResultCommand, FailureType } from "@aws-sdk/client-codepipeline"; // ES Modules import
+import {
+  LambdaClient, PublishLayerVersionCommand, AddLayerVersionPermissionCommand, Runtime,
+} from "@aws-sdk/client-lambda";
+import {
+  CodePipelineClient, PutJobSuccessResultCommand, PutJobFailureResultCommand, FailureType,
+} from "@aws-sdk/client-codepipeline";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 const s3 = new S3Client();
@@ -13,7 +17,9 @@ export async function handler(event: any) {
   const jobId = event['CodePipeline.job'].id;
   const { location } = event['CodePipeline.job'].data.inputArtifacts[0];
   // The user parameters are passed as a single string
-  const { region, layerPrincipal, organizationId } = JSON.parse(event['CodePipeline.job'].data.actionConfiguration.configuration.UserParameters);
+  const { region, layerPrincipal, organizationId } = JSON.parse(
+    event['CodePipeline.job'].data.actionConfiguration.configuration.UserParameters,
+  );
 
   // Download layer
   const getObjectCommand = new GetObjectCommand({
@@ -36,7 +42,7 @@ export async function handler(event: any) {
     // Create Lambda client for the specified region
     const lambda = new LambdaClient({ region });
     const command = new PublishLayerVersionCommand(layerParams);
-    const layer = await lambda.send(command);;
+    const layer = await lambda.send(command);
     console.log('Layer created: ', layer);
     if (layer.Version) {
       const layerPermissionsCommand = new AddLayerVersionPermissionCommand({
