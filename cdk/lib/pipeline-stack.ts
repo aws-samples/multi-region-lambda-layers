@@ -44,7 +44,11 @@ export default class LambdaLayerPipelineStack extends Stack {
     const layerUpdaterRole = this.createLambdaRole();
 
     const distributor = new NodejsFunction(this, 'LayerDistributor', {
-      entry: '../src/lambda/layer-distributor.ts',
+      // The Lambda source lives in the sibling `src` package, so anchor the esbuild
+      // bundling in that package (its own entry, lock file and esbuild install).
+      entry: path.join(__dirname, '..', '..', 'src', 'lambda', 'layer-distributor.ts'),
+      projectRoot: path.join(__dirname, '..', '..', 'src'),
+      depsLockFilePath: path.join(__dirname, '..', '..', 'src', 'package-lock.json'),
       runtime: lambda.Runtime.NODEJS_24_X,
       role: layerUpdaterRole,
       functionName: 'LambdaLayerDistributor',
@@ -62,6 +66,7 @@ export default class LambdaLayerPipelineStack extends Stack {
 
     new codepipeline.Pipeline(this, 'Pipeline', {
       pipelineName: 'LambdaLayerBuilderPipeline',
+      pipelineType: codepipeline.PipelineType.V2,
       crossAccountKeys: false,
       stages: [
         {
@@ -91,7 +96,7 @@ export default class LambdaLayerPipelineStack extends Stack {
 
     const cfnRepository = new codecommit.CfnRepository(this, 'LambdaLayerSource', {
       repositoryName: 'lambda-layer-source',
-      repositoryDescription: 'Contains the source code for a nodejs v22 Lambda layer.',
+      repositoryDescription: 'Contains the source code for a nodejs v24 Lambda layer.',
       // This initializes the main branch with source code from S3
       code: {
         branchName: 'main',

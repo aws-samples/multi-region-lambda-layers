@@ -14,3 +14,5 @@ cdk.out
 
 .DS_Store
 *.zip
+
+build.log
