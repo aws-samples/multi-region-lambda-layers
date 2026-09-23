@@ -9,66 +9,183 @@ import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 const s3 = new S3Client();
 const codepipeline = new CodePipelineClient();
+const layerName = 'sample-layer';
+const regionPattern = /^[a-z0-9]+(?:-[a-z0-9]+)+$/;
+const accountIdPattern = /^\d{12}$/;
+const organizationIdPattern = /^o-[a-z0-9]{10,32}$/;
 
-export async function handler(event: any) {
-  console.log('Received event ', JSON.stringify(event));
+type RecordValue = Record<string, unknown>;
 
-  // Extract data from input
+interface DeploymentConfiguration {
+  allowedRegions: string[];
+  layerPrincipal: string;
+  organizationId?: string;
+}
+
+interface DistributionInput {
+  jobId: string;
+  bucketName: string;
+  objectKey: string;
+  region: string;
+}
+
+function isRecord(value: unknown): value is RecordValue {
+  return typeof value === 'object' && value !== null;
+}
+
+function requiredString(value: unknown, fieldName: string): string {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new Error(`Invalid ${fieldName}`);
+  }
+  return value;
+}
+
+function optionalString(value: unknown): string | undefined {
+  return value === undefined || value === null || value === '' ? undefined : requiredString(value, 'optional value');
+}
+
+function getJobId(event: unknown): string | undefined {
+  if (!isRecord(event) || !isRecord(event['CodePipeline.job'])) {
+    return undefined;
+  }
   const jobId = event['CodePipeline.job'].id;
-  const { location } = event['CodePipeline.job'].data.inputArtifacts[0];
-  // The user parameters are passed as a single string
-  const { region, layerPrincipal, organizationId } = JSON.parse(
-    event['CodePipeline.job'].data.actionConfiguration.configuration.UserParameters,
+  return typeof jobId === 'string' && jobId.length > 0 ? jobId : undefined;
+}
+
+function getDeploymentConfiguration(): DeploymentConfiguration {
+  const allowedRegions = requiredString(process.env.ALLOWED_REGIONS, 'configured regions').split(',');
+  if (allowedRegions.length === 0
+    || allowedRegions.some((region) => !regionPattern.test(region))) {
+    throw new Error('Invalid configured region allowlist');
+  }
+
+  const layerPrincipal = requiredString(process.env.LAYER_PRINCIPAL, 'configured layer principal');
+  const organizationId = optionalString(process.env.ORGANIZATION_ID);
+  if (layerPrincipal === '*' && !organizationId) {
+    throw new Error('A wildcard layer principal requires an organization');
+  }
+  if (organizationId && !organizationIdPattern.test(organizationId)) {
+    throw new Error('Invalid configured organization ID');
+  }
+  if (organizationId && layerPrincipal !== '*') {
+    throw new Error('An organization ID requires a wildcard layer principal');
+  }
+  if (layerPrincipal !== '*' && !accountIdPattern.test(layerPrincipal)) {
+    throw new Error('Invalid configured layer principal');
+  }
+
+  return { allowedRegions, layerPrincipal, organizationId };
+}
+
+function parseDistributionInput(event: unknown, allowedRegions: string[]): DistributionInput {
+  if (!isRecord(event) || !isRecord(event['CodePipeline.job'])) {
+    throw new Error('Invalid CodePipeline event');
+  }
+
+  const job = event['CodePipeline.job'];
+  if (!isRecord(job.data) || !Array.isArray(job.data.inputArtifacts) || job.data.inputArtifacts.length === 0) {
+    throw new Error('Missing input artifact');
+  }
+
+  const artifact = job.data.inputArtifacts[0];
+  if (!isRecord(artifact) || !isRecord(artifact.location) || !isRecord(artifact.location.s3Location)) {
+    throw new Error('Invalid input artifact location');
+  }
+
+  const s3Location = artifact.location.s3Location;
+  const bucketName = requiredString(s3Location.bucketName, 'artifact bucket');
+  const objectKey = requiredString(s3Location.objectKey, 'artifact key');
+
+  if (!isRecord(job.data.actionConfiguration)
+    || !isRecord(job.data.actionConfiguration.configuration)) {
+    throw new Error('Missing action configuration');
+  }
+  const userParameters = requiredString(
+    job.data.actionConfiguration.configuration.UserParameters,
+    'user parameters',
   );
 
-  // Download layer
-  const getObjectCommand = new GetObjectCommand({
-    Bucket: location.s3Location.bucketName,
-    Key: location.s3Location.objectKey
-  });
-  const getObjectCommandResult = await s3.send(getObjectCommand)
-  const layerZip = await getObjectCommandResult.Body?.transformToByteArray();
-
-  const layerParams = {
-    Content: {
-      ZipFile: layerZip
-    },
-    LayerName: 'sample-layer',
-    CompatibleRuntimes: [Runtime.nodejs22x, Runtime.nodejs24x] as Runtime[],
-    Description: 'Sample layer distributed to multiple region by CodePipeline',
-    LicenseInfo: 'MIT'
-  };
+  let parameters: unknown;
   try {
-    // Create Lambda client for the specified region
-    const lambda = new LambdaClient({ region });
-    const command = new PublishLayerVersionCommand(layerParams);
-    const layer = await lambda.send(command);
-    console.log('Layer created: ', layer);
-    if (layer.Version) {
-      const layerPermissionsCommand = new AddLayerVersionPermissionCommand({
-        Action: 'lambda:GetLayerVersion',
-        LayerName: layerParams.LayerName,
-        Principal: layerPrincipal,
-        StatementId: 'layer-policy',
-        VersionNumber: layer.Version,
-        ...(organizationId && { OrganizationId: organizationId }),
-      });
-      const layerPermissions = await lambda.send(layerPermissionsCommand);
-      console.log('Permissions applied: ', layerPermissions);
-    }
-  } catch (err) {
-    console.error(err);
-    // Inform CodePipeline about the failure
-    const params = {
-      failureDetails: {
-        message: 'Layer distribution failed. Please check CloudWatch logs',
-        type: FailureType.JobFailed
-      },
-      jobId
-    };
-    const command = new PutJobFailureResultCommand(params);
-    return await codepipeline.send(command);
+    parameters = JSON.parse(userParameters);
+  } catch {
+    throw new Error('Invalid user parameters');
   }
-  const command = new PutJobSuccessResultCommand({ jobId });
-  return await codepipeline.send(command);
+  if (!isRecord(parameters)) {
+    throw new Error('Invalid user parameters');
+  }
+
+  const region = requiredString(parameters.region, 'region');
+  if (!regionPattern.test(region) || !allowedRegions.includes(region)) {
+    throw new Error('Region is not in the configured allowlist');
+  }
+
+  return {
+    jobId: requiredString(job.id, 'job ID'),
+    bucketName,
+    objectKey,
+    region,
+  };
+}
+
+async function reportFailure(jobId: string | undefined): Promise<unknown> {
+  if (!jobId) {
+    throw new Error('CodePipeline job ID is unavailable');
+  }
+
+  return codepipeline.send(new PutJobFailureResultCommand({
+    failureDetails: {
+      message: 'Layer distribution failed. Please check CloudWatch logs',
+      type: FailureType.JobFailed,
+    },
+    jobId,
+  }));
+}
+
+export async function handler(event: unknown): Promise<unknown> {
+  const jobId = getJobId(event);
+
+  try {
+    const configuration = getDeploymentConfiguration();
+    const input = parseDistributionInput(event, configuration.allowedRegions);
+    const getObjectCommandResult = await s3.send(new GetObjectCommand({
+      Bucket: input.bucketName,
+      Key: input.objectKey,
+    }));
+    if (!getObjectCommandResult.Body) {
+      throw new Error('Layer artifact is empty');
+    }
+    const layerZip = await getObjectCommandResult.Body.transformToByteArray();
+    if (layerZip.length === 0) {
+      throw new Error('Layer artifact is empty');
+    }
+
+    const lambda = new LambdaClient({ region: input.region });
+    const layer = await lambda.send(new PublishLayerVersionCommand({
+      Content: { ZipFile: layerZip },
+      LayerName: layerName,
+      CompatibleRuntimes: [Runtime.nodejs22x, Runtime.nodejs24x] as Runtime[],
+      Description: 'Sample layer distributed to multiple regions by CodePipeline',
+      LicenseInfo: 'MIT',
+    }));
+    if (layer.Version === undefined) {
+      throw new Error('Layer version was not returned');
+    }
+
+    await lambda.send(new AddLayerVersionPermissionCommand({
+      Action: 'lambda:GetLayerVersion',
+      LayerName: layerName,
+      Principal: configuration.layerPrincipal,
+      StatementId: 'layer-policy',
+      VersionNumber: layer.Version,
+      ...(configuration.organizationId && { OrganizationId: configuration.organizationId }),
+    }));
+
+    console.log('Layer distribution completed', { jobId: input.jobId, region: input.region });
+    return await codepipeline.send(new PutJobSuccessResultCommand({ jobId: input.jobId }));
+  } catch (error) {
+    const errorName = error instanceof Error ? error.name : 'UnknownError';
+    console.error('Layer distribution failed', { jobId, errorName });
+    return await reportFailure(jobId);
+  }
 }

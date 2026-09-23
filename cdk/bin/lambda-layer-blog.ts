@@ -6,12 +6,12 @@ import LambdaLayerPipelineStack from '../lib/pipeline-stack';
 const app = new cdk.App();
 
 /**
- * layerPrincipal: An account ID, or * to grant layer usage permission to all accounts in an organization,
- * or all Amazon Web Services accounts (if organizationId is not specified).
- * For the last case, make sure that you really do want all Amazon Web Services accounts to have usage permission to this layer.
+ * layerPrincipal: An AWS account ID to grant layer usage permission to.
+ * For organization-wide sharing, set this to '*' and provide organizationId.
+ * A wildcard principal without an organization ID is rejected by the stack.
  *
- * regionsToDistribute: The region code where the Lambda Layer will be distributed to.
- * See https://docs.aws.amazon.com/en_en/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
+ * regionsToDistribute: The region codes where the Lambda layer will be distributed.
+ * See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
  */
 new LambdaLayerPipelineStack(app, 'LambdaLayerPipelineStack', {
   regionCodesToDistribute: ['eu-central-1', 'eu-west-1', 'us-west-1', 'us-east-1'],

@@ -1,8 +1,8 @@
 {
-    "name": "lambda-layer",
-    "version": "1.0.0",
-    "description": "Sample AWS Lambda layer",
-    "dependencies": {
-      "aws-sdk": "latest"
-    }
+  "name": "lambda-layer",
+  "version": "1.0.0",
+  "description": "Sample AWS Lambda layer with AWS SDK for JavaScript v3",
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1118.0"
   }
+}

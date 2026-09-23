@@ -1,15 +1,12 @@
 {
-    "name": "lambda-layer-sample",
-    "version": "1.0.0",
-    "description": "Sample AWS Lambda layer with ASK SDK",
-    "dependencies": {
-      "ask-sdk": "latest",
-      "ask-sdk-runtime": "latest",
-      "ask-sdk-core": "latest",
-      "ask-sdk-model": "latest",
-      "ask-sdk-dynamodb-persistence-adapter": "latest",
-      "ask-sdk-s3-persistence-adapter": "latest",
-      "i18next": "latest",
-      "i18next-sprintf-postprocessor": "latest"
-    }
+  "name": "lambda-layer-sample",
+  "version": "1.0.0",
+  "description": "Sample AWS Lambda layer with ASK SDK core",
+  "dependencies": {
+    "ask-sdk-runtime": "2.14.0",
+    "ask-sdk-core": "2.14.0",
+    "ask-sdk-model": "1.86.0",
+    "i18next": "26.4.2",
+    "i18next-sprintf-postprocessor": "0.2.2"
   }
+}

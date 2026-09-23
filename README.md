@@ -9,7 +9,7 @@ This repository contains the full source code that is used in the blog post [Dep
 ### Prerequisites
 
 - An [AWS account](https://signin.aws.amazon.com/signin?redirect_uri=https%3A%2F%2Fportal.aws.amazon.com%2Fbilling%2Fsignup%2Fresume&client_id=signup)
-- Installed and authenticated [AWS CLI](https://docs.aws.amazon.com/en_pv/cli/latest/userguide/cli-chap-install.html) (authenticate with an [IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-started.html) user or an [AWS STS](https://docs.aws.amazon.com/STS/latest/APIReference/Welcome.html) Security Token)
+- An [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html) configured with an IAM role or short-lived [AWS STS](https://docs.aws.amazon.com/STS/latest/APIReference/Welcome.html) credentials. Do not use long-lived IAM access keys for this sample.
 - Installed and setup [AWS Cloud Development Kit (AWS CDK)](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html)
 - Installed Node.js, TypeScript and git
 
@@ -37,12 +37,11 @@ git clone git@github.com:aws-samples/multi-region-lambda-layers.git
 
 #### 3. Install dependencies
 
-node.js dependencies are declared in a `package.json`.
-This project contains a `package.json` file in two different folder: 
+Dependencies are declared in a `package.json` and pinned in a lock file. This project contains a `package.json` file in two different folders:
 - `cdk`: Dependencies required to deploy your stack with the CDK
-- `src`: Dependencies required for the Lambda function, i.e. TypeScript types for AWS SDK 
+- `src`: Dependencies required for the Lambda function, such as TypeScript types for the AWS SDK
 
-Navigate to each of the folders and run `npm install`
+Navigate to each of the folders and run `npm ci`.
 
 #### 4. Configure your stack (optional)
 
@@ -51,12 +50,13 @@ Open `cdk/bin/lambda-layer-blog.ts` and adjust the regions to deploy the layer i
 ```
 // List of regions to distribute the Lambda layer to
 regionCodesToDistribute: ['eu-central-1', 'eu-west-1', 'us-west-1', 'us-east-1'],
-// Grants layer usage permission to either an individual AWS account (by id) 
-// or all Amazon Web Services accounts '*' (if organizationId is not specified)
+// Grants layer usage permission to one AWS account (the default)
 layerPrincipal: cdk.Aws.ACCOUNT_ID,
-// Limits usage permissions to all accounts in the organization if id is specified
+// To share with an organization, use layerPrincipal: '*' together with its organization ID.
 organizationId: '',
 ```
+
+The stack rejects duplicate or malformed region names. A wildcard layer principal is rejected unless an AWS Organizations ID is also supplied. Avoid public layer sharing unless it is explicitly required.
 
 #### 5. Deploy your application
 
@@ -77,7 +77,7 @@ If you navigate to CodePipeline in the AWS console, you will now see the followi
 
 #### 6. Adjust your layer content
 
-The CodeCommit repository contains a sample `package.json` file which defines the AWS SDK for Javascript for demonstration purposes. The created layer doesn't add any value because the SDK is already provided with the AWS Lambda runtime. To provide a more useful layer, update `package.json` in the repository with the file provided in `src/example` for example. This will create a layer with the latest version of the ASK SDK for Alexa.
+The CodeCommit repository contains a sample `package.json` file that defines the AWS SDK for JavaScript v3 for demonstration purposes. The created layer doesn't add any value because the AWS SDK clients are already provided with the AWS Lambda runtime. To provide a more useful layer, update `package.json` in the repository with the file provided in `src/example`, for example. This will create a layer with the pinned ASK SDK dependencies.
 
 ## Cleaning up
 
@@ -95,6 +95,8 @@ If you no longer need these files, you can use the AWS CLI or console to empty t
 Similarily, the AWS Lambda layers that were created by running the pipeline need to be manually removed if not needed anymore. 
 
 ## Security
+
+The pipeline uses a dedicated encrypted, versioned artifact bucket with public access blocked. The distributor role can read only that bucket, publish only the configured layer in the configured regions, and write only to its own log group. The build uses the committed lock file and disables package lifecycle scripts.
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
 
